@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+
+    <changeSet id="004" author="gpt">
+        <createTable tableName="product_attributes">
+            <column name="id" type="BIGSERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <column name="uuid" type="UUID">
+                <constraints nullable="false" unique="true"/>
+            </column>
+
+            <column name="product_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="attribute_name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="attribute_value" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="product_attributes"
+                baseColumnNames="product_id"
+                constraintName="fk_attr_product"
+                referencedTableName="products"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+
+        <createIndex tableName="product_attributes" indexName="idx_attr_product">
+            <column name="product_id"/>
+        </createIndex>
+
+        <createIndex tableName="product_attributes" indexName="idx_attr_name">
+            <column name="attribute_name"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="product_attributes"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

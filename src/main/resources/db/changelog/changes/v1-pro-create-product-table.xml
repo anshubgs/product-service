@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+
+    <changeSet id="003" author="gpt">
+        <createTable tableName="products">
+            <column name="id" type="BIGSERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="uuid" type="UUID">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT"/>
+            <column name="price" type="DECIMAL(10,2)"/>
+            <column name="discount" type="DECIMAL(5,2)"/>
+            <column name="final_price" type="DECIMAL(10,2)"/>
+            <column name="stock_quantity" type="INT"/>
+            <column name="sku_code" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="status" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="category_id" type="BIGINT"/>
+            <column name="brand_id" type="BIGINT"/>
+            <column name="is_deleted" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="category_id"
+                                 baseTableName="products"
+                                 constraintName="fk_product_category"
+                                 referencedColumnNames="id"
+                                 referencedTableName="categories"/>
+
+        <addForeignKeyConstraint baseColumnNames="brand_id"
+                                 baseTableName="products"
+                                 constraintName="fk_product_brand"
+                                 referencedColumnNames="id"
+                                 referencedTableName="brands"/>
+
+        <addCheckConstraint tableName="products" constraintName="chk_product_status"
+                            checkCondition="status IN ('ACTIVE','INACTIVE','OUT_OF_STOCK')"/>
+
+        <createIndex tableName="products" indexName="idx_product_name">
+            <column name="name"/>
+        </createIndex>
+
+        <createIndex tableName="products" indexName="idx_product_sku">
+            <column name="sku_code"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>
