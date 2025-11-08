@@ -1,12 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <databaseChangeLog
-        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="
+        http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.31.xsd">
 
-    <changeSet id="000-create-product-service-schema" author="anshu">
-        <createSchema schemaName="product_service"/>
-    </changeSet>
+  <changeSet id="000-create-product-service-schema" author="anshu">
+    <preConditions onFail="MARK_RAN">
+      <sqlCheck expectedResult="0"><![CDATA[
+        SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = 'product_service';
+      ]]></sqlCheck>
+    </preConditions>
+
+    <sql>CREATE SCHEMA IF NOT EXISTS product_service AUTHORIZATION current_user;</sql>
+  </changeSet>
 
 </databaseChangeLog>

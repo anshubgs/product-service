@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="
+        http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.31.xsd">
+
+    <!-- 1️⃣ Enable pgcrypto -->
+    <changeSet id="000-enable-pgcrypto" author="anshu">
+        <preConditions onFail="MARK_RAN" onError="MARK_RAN">
+            <sqlCheck expectedResult="0"><![CDATA[
+                SELECT COUNT(*) FROM pg_extension WHERE extname = 'pgcrypto';
+            ]]></sqlCheck>
+        </preConditions>
+
+        <sql><![CDATA[
+            CREATE EXTENSION IF NOT EXISTS pgcrypto;
+        ]]></sql>
+    </changeSet>
+
+    <!-- 2️⃣ Create products table -->
+    <changeSet id="003-create-products" author="anshu">
+        <preConditions onFail="HALT" onError="HALT">
+            <sqlCheck expectedResult="1"><![CDATA[
+                SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = 'product_service';
+            ]]></sqlCheck>
+        </preConditions>
+
+        <createTable tableName="products" schemaName="product_service">
+            <column name="id" type="BIGSERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="uuid" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT"/>
+            <column name="price" type="DECIMAL(12,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="discount" type="DECIMAL(5,2)" defaultValueNumeric="0.00">
+                <constraints nullable="false"/>
+            </column>
+            <column name="final_price" type="DECIMAL(12,2)" defaultValueNumeric="0.00">
+                <constraints nullable="false"/>
+            </column>
+            <column name="stock_quantity" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sku_code" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="status" type="VARCHAR(50)" defaultValue="INACTIVE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="category_id" type="BIGINT"/>
+            <column name="brand_id" type="BIGINT"/>
+            <column name="is_deleted" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <sql><![CDATA[
+            ALTER TABLE product_service.products
+              ADD CONSTRAINT chk_product_status CHECK (status IN ('ACTIVE','INACTIVE','OUT_OF_STOCK'));
+            ALTER TABLE product_service.products
+              ADD CONSTRAINT chk_product_price_nonneg CHECK (price >= 0);
+            ALTER TABLE product_service.products
+              ADD CONSTRAINT chk_product_discount_range CHECK (discount >= 0 AND discount <= 100);
+            ALTER TABLE product_service.products
+              ADD CONSTRAINT chk_stock_nonnegative CHECK (stock_quantity >= 0);
+        ]]></sql>
+
+        <createIndex schemaName="product_service" tableName="products" indexName="idx_product_name">
+            <column name="name"/>
+        </createIndex>
+
+        <createIndex schemaName="product_service" tableName="products" indexName="idx_product_sku">
+            <column name="sku_code"/>
+        </createIndex>
+
+        <createIndex schemaName="product_service" tableName="products" indexName="idx_product_category">
+            <column name="category_id"/>
+        </createIndex>
+
+        <createIndex schemaName="product_service" tableName="products" indexName="idx_product_brand">
+            <column name="brand_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- 3️⃣ Add foreign keys (precondition fixed: use IN instead of +) -->
+    <changeSet id="003b-add-product-fks" author="anshu">
+        <preConditions onFail="MARK_RAN" onError="HALT">
+            <sqlCheck expectedResult="2"><![CDATA[
+                SELECT COUNT(*) FROM information_schema.tables
+                  WHERE table_schema = 'product_service'
+                    AND table_name IN ('categories','brands');
+            ]]></sqlCheck>
+        </preConditions>
+
+        <addForeignKeyConstraint baseTableSchemaName="product_service"
+                                 baseTableName="products"
+                                 baseColumnNames="category_id"
+                                 referencedTableSchemaName="product_service"
+                                 referencedTableName="categories"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_product_category"
+                                 onDelete="SET NULL"/>
+
+        <addForeignKeyConstraint baseTableSchemaName="product_service"
+                                 baseTableName="products"
+                                 baseColumnNames="brand_id"
+                                 referencedTableSchemaName="product_service"
+                                 referencedTableName="brands"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_product_brand"
+                                 onDelete="SET NULL"/>
+    </changeSet>
+
+    <!-- 4️⃣ Trigger for updated_at & final_price -->
+   <changeSet id="003a-add-update-trigger" author="anshu">
+    <preConditions onFail="MARK_RAN" onError="MARK_RAN">
+        <sqlCheck expectedResult="0"><![CDATA[
+            SELECT COUNT(*) FROM pg_proc WHERE proname = 'product_update_trg_fn';
+        ]]></sqlCheck>
+    </preConditions>
+
+    <sql splitStatements="false" stripComments="false"><![CDATA[
+-- create or replace update trigger function for products
+CREATE OR REPLACE FUNCTION product_update_trg_fn()
+RETURNS TRIGGER AS $function$
+BEGIN
+    NEW.updated_at = NOW();
+
+    IF (TG_OP = 'UPDATE' AND (NEW.price IS DISTINCT FROM OLD.price OR NEW.discount IS DISTINCT FROM OLD.discount))
+       OR (TG_OP = 'INSERT') THEN
+        NEW.final_price := ROUND((COALESCE(NEW.price,0) * (1 - COALESCE(NEW.discount,0)/100.0))::numeric, 2);
+    END IF;
+
+    RETURN NEW;
+END;
+$function$ LANGUAGE plpgsql;
+
+-- ensure trigger exists
+DROP TRIGGER IF EXISTS trg_product_update ON product_service.products;
+
+CREATE TRIGGER trg_product_update
+BEFORE INSERT OR UPDATE ON product_service.products
+FOR EACH ROW
+EXECUTE FUNCTION product_update_trg_fn();
+]]></sql>
+</changeSet>
+   
+
+</databaseChangeLog>

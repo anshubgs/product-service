@@ -1,21 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <databaseChangeLog
-        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="
+        http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.31.xsd">
 
+    <!-- create schema first -->
     <include file="db/changelog/changes/v0-pro-create-schema.xml"/>
-    <include file="db/changelog/changes/v1-pro-create-product-table.xml"/>
-    <include file="db/changelog/changes/v2-pro-create-category-table.xml"/>
-    <include file="db/changelog/changes/v3-pro-create-brand-table.xml"/>
+
+    <!-- core tables -->
+    <include file="db/changelog/changes/v1-pro-create-category-table.xml"/>
+    <include file="db/changelog/changes/v2-pro-create-brand-table.xml"/>
+    <include file="db/changelog/changes/v3-pro-create-product-table.xml"/>
     <include file="db/changelog/changes/v4-pro-create-product-attribute-table.xml"/>
     <include file="db/changelog/changes/v5-pro-create-product-variant-table.xml"/>
-     <include file="db/changelog/changes/v6-pro-create-product-audit-log-table.xml"/>
-      <!--    <include file="db/changelog/changes/v8-pay-add-completed-at.xml"/>
-              <include file="db/changelog/changes/v9-pay-create-payment-table.xml"/>
-              
-                <include file="db/changelog/changes/v10-pay-add-customer-uuid-column.xml"/>
-       
- <include file="db/changelog/changes/v6-pay-updated-transcation-table.xml"/>  ✅ only once -->
+    <include file="db/changelog/changes/v6-pro-create-product-audit-log-table.xml"/>
+
 </databaseChangeLog>
